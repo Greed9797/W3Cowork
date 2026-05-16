@@ -84,6 +84,9 @@ jobs:
       - name: Build MCP servers
         run: npm run build:mcp
 
+      - name: Prepare Playwright (bundle MCP + Chromium)
+        run: npm run prepare:playwright
+
       - name: TypeScript compile
         run: npx tsc
 
@@ -202,6 +205,9 @@ jobs:
 
       - name: Build MCP servers
         run: npm run build:mcp
+
+      - name: Prepare Playwright (bundle MCP + Chromium)
+        run: npm run prepare:playwright
 
       - name: TypeScript compile
         run: npx tsc

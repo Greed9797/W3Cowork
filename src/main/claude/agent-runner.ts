@@ -1715,6 +1715,31 @@ ${hints.join('\n')}
           const bundledNodePaths = getBundledNodePaths();
           const bundledNpx = bundledNodePaths?.npx ?? null;
 
+          // Resolve bundled Playwright MCP paths once per cache build
+          const bundledPlaywrightMcp = (() => {
+            const resourcesRoot = app.isPackaged
+              ? process.resourcesPath
+              : path.join(__dirname, '..', '..', 'resources');
+            const mcpEntry = app.isPackaged
+              ? path.join(resourcesRoot, 'playwright-mcp', 'entry.js')
+              : path.join(
+                  resourcesRoot,
+                  'playwright-mcp',
+                  `${process.platform}-${process.arch}`,
+                  'entry.js'
+                );
+            const browsersDir = app.isPackaged
+              ? path.join(resourcesRoot, 'playwright-browsers')
+              : path.join(
+                  resourcesRoot,
+                  'playwright-browsers',
+                  `${process.platform}-${process.arch}`
+                );
+            return fs.existsSync(mcpEntry) && fs.existsSync(browsersDir)
+              ? { entry: mcpEntry, browsersDir }
+              : null;
+          })();
+
           for (const config of allConfigs) {
             try {
               // Use a simpler key without spaces to avoid issues
@@ -1722,7 +1747,7 @@ ${hints.join('\n')}
 
               if (config.type === 'stdio') {
                 // 当命令是 npx 或 node 时优先使用内置路径
-                const command =
+                let command =
                   config.command === 'npx' && bundledNpx
                     ? bundledNpx
                     : config.command === 'node' && bundledNodePaths
@@ -1746,11 +1771,28 @@ ${hints.join('\n')}
                 // Resolve path placeholders for presets
                 let resolvedArgs = config.args || [];
 
+                // Playwright MCP: replace `npx @playwright/mcp@latest` with bundled
+                // entry.js so end users need zero setup. Set PLAYWRIGHT_BROWSERS_PATH
+                // so Chromium is found from our bundled location.
+                const isPlaywrightMcp = resolvedArgs.some((arg) => arg.includes('@playwright/mcp'));
+                if (isPlaywrightMcp && bundledPlaywrightMcp && bundledNodePaths) {
+                  command = bundledNodePaths.node;
+                  // Strip the original `@playwright/mcp@...` arg; replace with entry
+                  resolvedArgs = [
+                    bundledPlaywrightMcp.entry,
+                    ...resolvedArgs.filter((arg) => !arg.includes('@playwright/mcp')),
+                  ];
+                  serverEnv.PLAYWRIGHT_BROWSERS_PATH = bundledPlaywrightMcp.browsersDir;
+                  log(
+                    `[ClaudeAgentRunner]   Playwright MCP redirected to bundled entry: ${bundledPlaywrightMcp.entry}`
+                  );
+                  log(
+                    `[ClaudeAgentRunner]   PLAYWRIGHT_BROWSERS_PATH=${bundledPlaywrightMcp.browsersDir}`
+                  );
+                }
+
                 // Ensure Playwright MCP always runs headless (no screen takeover)
-                if (
-                  resolvedArgs.some((arg) => arg.includes('@playwright/mcp')) &&
-                  !resolvedArgs.includes('--headless')
-                ) {
+                if (isPlaywrightMcp && !resolvedArgs.includes('--headless')) {
                   resolvedArgs = [...resolvedArgs, '--headless'];
                 }
 

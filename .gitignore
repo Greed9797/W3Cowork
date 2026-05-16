@@ -64,6 +64,8 @@ dist*
 resources/node
 resources/tools
 resources/python
+resources/playwright-mcp
+resources/playwright-browsers
 docs/
 /.mcp.json
 /eng.traineddata

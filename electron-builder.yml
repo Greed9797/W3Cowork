@@ -74,6 +74,10 @@ win:
       to: node
     - from: dist-wsl-agent
       to: wsl-agent
+    - from: resources/playwright-mcp/win32-x64
+      to: playwright-mcp
+    - from: resources/playwright-browsers/win32-x64
+      to: playwright-browsers
     - from: .claude/skills
       to: skills
 
@@ -106,6 +110,10 @@ mac:
       to: tools
     - from: dist-lima-agent
       to: lima-agent
+    - from: resources/playwright-mcp/darwin-${arch}
+      to: playwright-mcp
+    - from: resources/playwright-browsers/darwin-${arch}
+      to: playwright-browsers
     - from: .claude/skills
       to: skills
 
@@ -123,6 +131,10 @@ linux:
       to: node
     - from: resources/python/linux-${arch}
       to: python
+    - from: resources/playwright-mcp/linux-x64
+      to: playwright-mcp
+    - from: resources/playwright-browsers/linux-x64
+      to: playwright-browsers
     - from: .claude/skills
       to: skills
 
