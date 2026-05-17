@@ -17,6 +17,7 @@
 
 import { ipcMain, shell } from 'electron';
 import * as fs from 'fs';
+import * as http from 'http';
 import * as path from 'path';
 import { getAdapterStatus } from './index';
 import { listAgents, WORKSPACE_DIR } from './agents.config';
@@ -52,6 +53,8 @@ const PIPELINE_STATE_TEMPLATE = {
 };
 
 const MAX_OUTPUT_BYTES = 256 * 1024; // 256 KB read cap
+const DEFAULT_TASK_TIMEOUT_MS = 10 * 60 * 1000;
+const IPC_TRIGGER_TIMEOUT_BUFFER_MS = 30 * 1000;
 
 function statePath(workspaceRoot: string): string {
   return path.join(workspaceRoot, WORKSPACE_DIR, 'pipeline-state.json');
@@ -77,6 +80,53 @@ function isPathInsideWorkspace(workspaceRoot: string, target: string): boolean {
   const resolvedRoot = path.resolve(workspaceRoot, WORKSPACE_DIR);
   const resolvedTarget = path.resolve(target);
   return resolvedTarget === resolvedRoot || resolvedTarget.startsWith(resolvedRoot + path.sep);
+}
+
+function resolveTriggerTimeoutMs(): number {
+  const taskTimeoutMs = parseInt(
+    process.env.PAPERCLIP_TASK_TIMEOUT_MS || `${DEFAULT_TASK_TIMEOUT_MS}`,
+    10
+  );
+  return taskTimeoutMs + IPC_TRIGGER_TIMEOUT_BUFFER_MS;
+}
+
+function postLocalJson(
+  urlString: string,
+  body: string,
+  timeoutMs: number
+): Promise<{ status: number; text: string }> {
+  const url = new URL(urlString);
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: `${url.pathname}${url.search}`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => {
+          resolve({
+            status: res.statusCode ?? 0,
+            text: Buffer.concat(chunks).toString('utf-8'),
+          });
+        });
+      }
+    );
+
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`Paperclip heartbeat timed out after ${timeoutMs}ms`));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 export function registerPaperclipIpc(workspaceRoot: string): void {
@@ -114,19 +164,15 @@ export function registerPaperclipIpc(workspaceRoot: string): void {
         budget: typeof payload.budget === 'number' ? payload.budget : 0.5,
       });
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-      const text = await res.text();
-      let parsed: unknown = text;
+      const res = await postLocalJson(url, body, resolveTriggerTimeoutMs());
+      let parsed: unknown = res.text;
       try {
-        parsed = JSON.parse(text);
+        parsed = JSON.parse(res.text);
       } catch {
         /* keep as text */
+        parsed = res.text;
       }
-      return { ok: res.ok, status: res.status, body: parsed };
+      return { ok: res.status >= 200 && res.status < 300, status: res.status, body: parsed };
     }
   );
 
