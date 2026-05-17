@@ -125,8 +125,15 @@ Padaria Exemplo,"Rua X, 123",+55 41 9999-0000,4.6,128,95,padaria,Curitiba/PR
 
 ## Regras
 
+- "Dry-run" no título da tarefa significa execução real com `quantidade` e budget
+  pequenos. NÃO adicionar `dry_run: true`, NÃO usar dados sintéticos e NÃO gerar
+  placeholders para parecer sucesso.
 - NUNCA inventar dados. Se um campo não existe no resultado real → `null`.
 - NUNCA marcar `tem_site: false` sem confirmar (checar campo "Website" do listing).
+- Um lead só é válido se uma fonte real confirmar ausência de site oficial
+  (Google Maps/Places sem campo Website, diretório confiável sem website, ou
+  busca web que mostre apenas perfis sociais/listagens e nenhum domínio próprio).
+  Se não der para confirmar, excluir o lead.
 - Limitar a `quantidade` leads no output JSON (default 30).
 - Slugificar `cidade` para nome de arquivo: lowercase, `/` → `-`, espaços → `-`.
 

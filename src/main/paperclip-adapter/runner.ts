@@ -36,6 +36,27 @@ export interface RunTaskResult {
 
 type Backend = 'claude' | 'pi';
 
+const DEFAULT_CLAUDE_ALLOWED_TOOLS = [
+  'WebSearch',
+  'web_search',
+  'Read',
+  'Write',
+  'Edit',
+  'MultiEdit',
+  'Bash',
+  'Grep',
+  'Glob',
+  'LS',
+];
+
+function splitList(value: string | undefined, fallback: string[]): string[] {
+  if (!value) return fallback;
+  return value
+    .split(/[,\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function resolveBackend(): Backend {
   const env = (process.env.PAPERCLIP_AGENT_BINARY || 'claude').toLowerCase();
   return env === 'pi' ? 'pi' : 'claude';
@@ -120,16 +141,26 @@ function buildFullPrompt(
   ].join('\n');
 }
 
-function buildArgs(
-  backend: Backend,
-  prompt: string,
-  workspaceRoot: string
-): { args: string[]; useStdin: boolean } {
-  // claude CLI: `claude -p "<prompt>" --print` runs non-interactive
+function buildArgs(backend: Backend, prompt: string): { args: string[]; useStdin: boolean } {
+  // claude CLI: `claude --print "<prompt>"` runs non-interactive.
+  // Keep variadic flags like --allowed-tools after the prompt so they do not
+  // consume the prompt argument in Claude Code 2.1.x.
   // pi CLI: `pi --print "<prompt>"` (best-effort, may need adjustment per pi version)
   if (backend === 'claude') {
+    const permissionMode = process.env.PAPERCLIP_PERMISSION_MODE || 'auto';
+    const allowedTools = splitList(
+      process.env.PAPERCLIP_ALLOWED_TOOLS,
+      DEFAULT_CLAUDE_ALLOWED_TOOLS
+    );
     return {
-      args: ['--print', '--cwd', workspaceRoot, prompt],
+      args: [
+        '--print',
+        '--permission-mode',
+        permissionMode,
+        prompt,
+        '--allowed-tools',
+        ...allowedTools,
+      ],
       useStdin: false,
     };
   }
@@ -175,7 +206,7 @@ export async function runAgentTask(params: RunTaskParams): Promise<RunTaskResult
   const skillContent = loadSkillContent(params.workspaceRoot, params.agent.skill);
   const pipelineState = readPipelineState(params.workspaceRoot);
   const prompt = buildFullPrompt(params, skillContent, pipelineState);
-  const { args } = buildArgs(backend, prompt, params.workspaceRoot);
+  const { args } = buildArgs(backend, prompt);
 
   const outputDirAbs = path.join(params.workspaceRoot, params.agent.outputDir);
   fs.mkdirSync(outputDirAbs, { recursive: true });
