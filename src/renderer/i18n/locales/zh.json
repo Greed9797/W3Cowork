@@ -72,6 +72,17 @@
     "general": "通用",
     "generalDesc": "外观、语言等通用偏好"
   },
+  "paperclip": {
+    "backendDefault": "默认后端",
+    "backendOverride": "高级：按 agent 覆盖",
+    "backendSdk": "SDK (API key)",
+    "backendCliClaude": "CLI · claude",
+    "backendCliCodex": "CLI · codex",
+    "backendCliPi": "CLI · pi",
+    "useDefault": "使用默认",
+    "configureInApi": "前往 设置 -> API",
+    "willExecuteVia": "将通过以下后端执行"
+  },
   "general": {
     "appearance": "外观",
     "theme": "主题",

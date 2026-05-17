@@ -1,3 +1,14 @@
+import type { PaperclipConfig as SharedPaperclipConfig } from '../../shared/paperclip-types';
+
+export type {
+  AgentId,
+  BackendAvailability,
+  BackendAvailabilityMap,
+  PaperclipBackendConfig,
+  PaperclipBackendType,
+  PaperclipConfig,
+} from '../../shared/paperclip-types';
+
 // Session types
 export interface Session {
   id: string;
@@ -689,6 +700,7 @@ export interface AppConfig {
   claudeCodePath?: string;
   defaultWorkdir?: string;
   globalSkillsPath?: string;
+  paperclip?: SharedPaperclipConfig;
   theme?: AppTheme;
   sandboxEnabled?: boolean;
   memoryEnabled?: boolean;

@@ -72,6 +72,17 @@
     "memory": "Memória",
     "memoryDesc": "Gerenciar memória de longo prazo e experiência do workspace"
   },
+  "paperclip": {
+    "backendDefault": "Backend padrão",
+    "backendOverride": "Avançado: substituição por agente",
+    "backendSdk": "SDK (API key)",
+    "backendCliClaude": "CLI · claude",
+    "backendCliCodex": "CLI · codex",
+    "backendCliPi": "CLI · pi",
+    "useDefault": "Usar padrão",
+    "configureInApi": "Configure em Settings -> API",
+    "willExecuteVia": "Será executado via"
+  },
   "general": {
     "appearance": "Aparência",
     "theme": "Tema",

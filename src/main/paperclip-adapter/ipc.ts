@@ -21,6 +21,8 @@ import * as http from 'http';
 import * as path from 'path';
 import { getAdapterStatus } from './index';
 import { listAgents, WORKSPACE_DIR } from './agents.config';
+import { configStore } from '../config/config-store';
+import { normalizePaperclipConfig } from './backend-types';
 
 const PIPELINE_STATE_TEMPLATE = {
   version: '1.0',
@@ -133,6 +135,16 @@ export function registerPaperclipIpc(workspaceRoot: string): void {
   ipcMain.handle('paperclip.status', () => getAdapterStatus());
 
   ipcMain.handle('paperclip.listAgents', () => listAgents());
+
+  ipcMain.handle('paperclip.getConfig', () =>
+    normalizePaperclipConfig(configStore.getAll().paperclip)
+  );
+
+  ipcMain.handle('paperclip.setConfig', (_event, config: unknown) => {
+    const normalized = normalizePaperclipConfig(config);
+    configStore.update({ paperclip: normalized });
+    return normalizePaperclipConfig(configStore.getAll().paperclip);
+  });
 
   ipcMain.handle('paperclip.getState', () => readPipelineState(workspaceRoot));
 

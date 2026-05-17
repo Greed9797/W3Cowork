@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-// Verifies the subprocess plumbing of paperclip-adapter/runner.ts without
-// burning API tokens: spawns the resolved binary with `--version` and asserts
-// non-zero output. Confirms binary resolution, env propagation, and stdout
-// capture work end-to-end.
+// Verifies Paperclip CLI backend binary resolution without burning API tokens:
+// spawns each supported CLI with `--version` and checks availability.
 
 import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
@@ -21,8 +19,15 @@ function resolveBinaryPath(backend) {
     for (const c of candidates) if (fs.existsSync(c)) return c;
     return 'claude';
   }
-  const local = path.join(process.cwd(), 'node_modules', '.bin', 'pi');
-  return fs.existsSync(local) ? local : 'pi';
+  if (backend === 'codex') {
+    return process.env.PAPERCLIP_CODEX_BIN || 'codex';
+  }
+  const candidates = [
+    process.env.PAPERCLIP_PI_BIN,
+    path.join(process.cwd(), 'node_modules', '.bin', 'pi'),
+  ].filter(Boolean);
+  for (const c of candidates) if (fs.existsSync(c)) return c;
+  return 'pi';
 }
 
 function runVersion(bin) {
@@ -43,9 +48,11 @@ function runVersion(bin) {
 
 const claudeBin = resolveBinaryPath('claude');
 const piBin = resolveBinaryPath('pi');
+const codexBin = resolveBinaryPath('codex');
 
 console.log('[smoke] resolved claude:', claudeBin);
 console.log('[smoke] resolved pi:    ', piBin);
+console.log('[smoke] resolved codex: ', codexBin);
 
 const claudeRes = await runVersion(claudeBin);
 console.log('[smoke] claude --version exit', claudeRes.code, '→', claudeRes.out.trim() || claudeRes.err.trim());
@@ -54,5 +61,12 @@ console.assert(claudeRes.out.length > 0, 'claude --version produced stdout');
 
 const piRes = await runVersion(piBin).catch((e) => ({ code: -1, out: '', err: e.message }));
 console.log('[smoke] pi --version exit    ', piRes.code, '→', (piRes.out || piRes.err).trim().substring(0, 200));
+console.assert(piRes.code === 0, 'pi --version exited 0');
+
+const codexRes = await runVersion(codexBin).catch((e) => ({ code: -1, out: '', err: e.message }));
+console.log('[smoke] codex --version exit ', codexRes.code, '→', (codexRes.out || codexRes.err).trim().substring(0, 200));
+if (codexRes.code !== 0) {
+  console.warn('[smoke] codex backend unavailable; UI should hide CLI codex unless configured.');
+}
 
 console.log('[smoke] Subprocess plumbing OK.');

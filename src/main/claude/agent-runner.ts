@@ -20,7 +20,6 @@ import {
   type AgentSession as PiAgentSession,
   type ToolDefinition,
 } from '@mariozechner/pi-coding-agent';
-import { Type, type TSchema } from '@sinclair/typebox';
 import { getSharedAuthStorage, ModelRegistry } from './shared-auth';
 import type { Session, Message, TraceStep, ServerEvent, ContentBlock } from '../../renderer/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -62,12 +61,9 @@ import {
 } from './pi-model-resolution';
 import { buildPiSessionRuntimeSignature } from './pi-session-runtime';
 import { ThinkTagStreamParser } from './think-tag-parser';
-import {
-  normalizeMcpToolResultForModel,
-  normalizeToolExecutionResultForUi,
-} from './tool-result-utils';
+import { normalizeToolExecutionResultForUi } from './tool-result-utils';
 import { fetchOllamaModelInfo } from '../config/ollama-api';
-import { analyzeImage, getVisualModelConfig } from './visual-model';
+import { buildMcpCustomTools } from './mcp-custom-tools';
 
 // Virtual workspace path shown to the model (hides real sandbox path)
 const VIRTUAL_WORKSPACE_PATH = '/workspace';
@@ -269,55 +265,6 @@ async function enrichProcessPathForBuild(): Promise<void> {
 }
 
 // Shared pi-ai auth storage — created once, reused across sessions.
-
-/**
- * Bridge MCP tools from MCPManager into pi-coding-agent ToolDefinition[] format.
- * Each MCP tool becomes a customTool whose execute() delegates to mcpManager.callTool().
- */
-function buildMcpCustomTools(mcpManager: MCPManager): ToolDefinition[] {
-  const mcpTools = mcpManager.getTools();
-  return mcpTools.map((mcpTool) => {
-    // Wrap the raw JSON Schema inputSchema as a TypeBox TSchema
-    const parameters = Type.Unsafe<Record<string, unknown>>(
-      mcpTool.inputSchema as Record<string, unknown>
-    );
-
-    const toolDef: ToolDefinition<TSchema, unknown> = {
-      name: mcpTool.name,
-      label: mcpTool.name.replace(/^mcp__/, '').replace(/__/g, ' → '),
-      description: mcpTool.description || `MCP tool from ${mcpTool.serverName}`,
-      parameters,
-      async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
-        try {
-          const result = await mcpManager.callTool(mcpTool.name, params as Record<string, unknown>);
-          const normalizedResult = normalizeMcpToolResultForModel(result);
-
-          // Dual-model: if this tool returned images and visual model is configured,
-          // call Gemini Vision and append its analysis to the text result.
-          let visualAnalysis = '';
-          if (normalizedResult.images.length > 0) {
-            const visualConfig = getVisualModelConfig();
-            if (visualConfig) {
-              visualAnalysis = await analyzeImage(visualConfig, normalizedResult.images);
-            }
-          }
-
-          return {
-            content: [{ type: 'text' as const, text: normalizedResult.text + visualAnalysis }],
-            details:
-              normalizedResult.images.length > 0
-                ? { openCoworkImages: normalizedResult.images }
-                : undefined,
-          };
-        } catch (err: unknown) {
-          logError(`[ClaudeAgentRunner] MCP tool ${mcpTool.name} failed:`, err);
-          throw err instanceof Error ? err : new Error(String(err));
-        }
-      },
-    };
-    return toolDef;
-  });
-}
 
 /**
  * Get shell environment with proper PATH (including node, npm, etc.)

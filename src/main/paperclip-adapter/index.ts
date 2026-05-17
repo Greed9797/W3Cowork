@@ -11,28 +11,34 @@
 
 import type { Server } from 'http';
 import { createAdapterServer } from './server';
+import type { MCPManager } from '../mcp/mcp-manager';
+import type { BackendAvailabilityMap } from './backend-types';
+import { getBackendAvailability } from './backends';
 
 let activeServer: Server | null = null;
 let activeStatus: AdapterStatus = {
   running: false,
   port: null,
   host: null,
-  backend: 'claude',
+  backend: 'multi',
   workspaceRoot: null,
+  backends: null,
 };
 
 export interface AdapterStatus {
   running: boolean;
   port: number | null;
   host: string | null;
-  backend: 'claude' | 'pi';
+  backend: string;
   workspaceRoot: string | null;
+  backends: BackendAvailabilityMap | null;
 }
 
 export interface StartAdapterOptions {
   workspaceRoot: string;
   port?: number;
   host?: string;
+  mcpManager?: MCPManager | null;
 }
 
 export function startPaperclipAdapter(options: StartAdapterOptions): Server | null {
@@ -50,7 +56,7 @@ export function startPaperclipAdapter(options: StartAdapterOptions): Server | nu
   const host = options.host ?? process.env.PAPERCLIP_ADAPTER_HOST ?? '127.0.0.1';
 
   try {
-    const server = createAdapterServer(options.workspaceRoot);
+    const server = createAdapterServer(options.workspaceRoot, options.mcpManager);
     server.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
         console.error(`[PaperclipAdapter] Port ${port} already in use — adapter not started`);
@@ -71,9 +77,9 @@ export function startPaperclipAdapter(options: StartAdapterOptions): Server | nu
       running: true,
       port,
       host,
-      backend:
-        (process.env.PAPERCLIP_AGENT_BINARY || 'claude').toLowerCase() === 'pi' ? 'pi' : 'claude',
+      backend: 'multi',
       workspaceRoot: options.workspaceRoot,
+      backends: getBackendAvailability(options.workspaceRoot),
     };
     return server;
   } catch (err) {
@@ -101,5 +107,10 @@ export function isPaperclipAdapterRunning(): boolean {
 }
 
 export function getAdapterStatus(): AdapterStatus {
-  return { ...activeStatus };
+  return {
+    ...activeStatus,
+    backends: activeStatus.workspaceRoot
+      ? getBackendAvailability(activeStatus.workspaceRoot)
+      : activeStatus.backends,
+  };
 }

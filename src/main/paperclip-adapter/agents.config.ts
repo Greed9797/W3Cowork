@@ -11,8 +11,10 @@
  * The runner reads the SKILL.md at request time and injects it into the system prompt.
  */
 
+import type { AgentId } from './backend-types';
+
 export interface AgentConfig {
-  id: string;
+  id: AgentId;
   name: string;
   role: string;
   skill: string;
@@ -23,7 +25,7 @@ export interface AgentConfig {
 
 export const WORKSPACE_DIR = 'default_working_dir';
 
-export const AGENTS: Record<string, AgentConfig> = {
+export const AGENTS: Record<AgentId, AgentConfig> = {
   'agent-1': {
     id: 'agent-1',
     name: 'Prospector',
@@ -115,7 +117,7 @@ Output an audit log to ${WORKSPACE_DIR}/sites/design-audit.log.`,
 };
 
 export function getAgent(id: string): AgentConfig | null {
-  return AGENTS[id] ?? null;
+  return (AGENTS as Record<string, AgentConfig>)[id] ?? null;
 }
 
 export function listAgents(): Array<Pick<AgentConfig, 'id' | 'name' | 'role' | 'skill'>> {

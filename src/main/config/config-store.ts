@@ -30,6 +30,11 @@ import {
   shouldUseAnthropicAuthToken,
 } from './auth-utils';
 import { API_PROVIDER_PRESETS, PI_AI_CURATED_PRESETS } from '../../shared/api-model-presets';
+import {
+  DEFAULT_PAPERCLIP_CONFIG,
+  normalizePaperclipConfig,
+  type PaperclipConfig,
+} from '../../shared/paperclip-types';
 
 /**
  * Application configuration schema
@@ -113,6 +118,9 @@ export interface AppConfig {
 
   // Optional: Global skills storage directory
   globalSkillsPath?: string;
+
+  // Paperclip pipeline backend selection
+  paperclip?: PaperclipConfig;
 
   // Developer logs
   enableDevLogs: boolean;
@@ -266,6 +274,7 @@ const defaultConfig: AppConfig = {
   claudeCodePath: '',
   defaultWorkdir: '',
   globalSkillsPath: '',
+  paperclip: DEFAULT_PAPERCLIP_CONFIG,
   enableDevLogs: false,
   theme: 'light',
   sandboxEnabled: false,
@@ -1006,6 +1015,7 @@ export class ConfigStore {
         typeof raw.globalSkillsPath === 'string'
           ? raw.globalSkillsPath
           : defaultConfig.globalSkillsPath,
+      paperclip: normalizePaperclipConfig(raw.paperclip),
       enableDevLogs: toBoolean(raw.enableDevLogs, defaultConfig.enableDevLogs),
       theme: isAppTheme(raw.theme) ? raw.theme : defaultConfig.theme,
       sandboxEnabled: toBoolean(raw.sandboxEnabled, defaultConfig.sandboxEnabled),
@@ -1460,6 +1470,10 @@ export class ConfigStore {
         updates.globalSkillsPath !== undefined
           ? updates.globalSkillsPath
           : current.globalSkillsPath,
+      paperclip:
+        updates.paperclip !== undefined
+          ? normalizePaperclipConfig(updates.paperclip)
+          : current.paperclip,
       enableDevLogs:
         updates.enableDevLogs !== undefined ? updates.enableDevLogs : current.enableDevLogs,
       theme: updates.theme !== undefined ? updates.theme : current.theme,

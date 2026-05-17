@@ -19,7 +19,7 @@
 
 import http, { IncomingMessage, ServerResponse } from 'http';
 import { getAgent, listAgents } from './agents.config';
-import { runAgentTask } from './runner';
+import type { MCPManager } from '../mcp/mcp-manager';
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024; // 4 MB safety cap
 
@@ -70,7 +70,8 @@ function matchAgentRoute(
 async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
-  workspaceRoot: string
+  workspaceRoot: string,
+  mcpManager?: MCPManager | null
 ): Promise<void> {
   const url = new URL(req.url || '/', 'http://localhost');
   const pathname = url.pathname;
@@ -122,12 +123,14 @@ async function handleRequest(
       const budget = typeof body.budget === 'number' ? (body.budget as number) : 1.0;
 
       try {
+        const { runAgentTask } = await import('./runner');
         const result = await runAgentTask({
           agent,
           task: taskText,
           context,
           budgetUsd: budget,
           workspaceRoot,
+          mcpManager,
         });
         return sendJson(res, 200, {
           status: 'completed',
@@ -148,9 +151,12 @@ async function handleRequest(
   return sendJson(res, 404, { error: 'Not found', path: pathname });
 }
 
-export function createAdapterServer(workspaceRoot: string): http.Server {
+export function createAdapterServer(
+  workspaceRoot: string,
+  mcpManager?: MCPManager | null
+): http.Server {
   return http.createServer((req, res) => {
-    handleRequest(req, res, workspaceRoot).catch((err: unknown) => {
+    handleRequest(req, res, workspaceRoot, mcpManager).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
       // last-resort response
       try {

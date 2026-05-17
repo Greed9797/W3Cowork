@@ -4,6 +4,8 @@ import path from 'node:path';
 
 const agentRunnerPath = path.resolve(process.cwd(), 'src/main/claude/agent-runner.ts');
 const agentRunnerContent = readFileSync(agentRunnerPath, 'utf8');
+const mcpCustomToolsPath = path.resolve(process.cwd(), 'src/main/claude/mcp-custom-tools.ts');
+const mcpCustomToolsContent = readFileSync(mcpCustomToolsPath, 'utf8');
 
 describe('ClaudeAgentRunner pi-coding-agent integration', () => {
   it('avoids dynamic re-import shadowing for config store singletons', () => {
@@ -99,9 +101,12 @@ describe('ClaudeAgentRunner pi-coding-agent integration', () => {
 
   it('routes MCP image results through structured helpers instead of stringifying base64 into text', () => {
     expect(agentRunnerContent).toContain(
-      "import {\n  normalizeMcpToolResultForModel,\n  normalizeToolExecutionResultForUi,\n} from './tool-result-utils'"
+      "import { buildMcpCustomTools } from './mcp-custom-tools'"
     );
-    expect(agentRunnerContent).toContain(
+    expect(mcpCustomToolsContent).toContain(
+      "import { normalizeMcpToolResultForModel } from './tool-result-utils'"
+    );
+    expect(mcpCustomToolsContent).toContain(
       'const normalizedResult = normalizeMcpToolResultForModel(result);'
     );
     expect(agentRunnerContent).toContain(

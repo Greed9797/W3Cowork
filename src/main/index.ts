@@ -1020,7 +1020,10 @@ app
     // external orchestration. No-op if ENABLE_PAPERCLIP_ADAPTER=false.
     try {
       const paperclipWorkspaceRoot = process.cwd();
-      startPaperclipAdapter({ workspaceRoot: paperclipWorkspaceRoot });
+      startPaperclipAdapter({
+        workspaceRoot: paperclipWorkspaceRoot,
+        mcpManager: sessionManager?.getMCPManager() ?? null,
+      });
       registerPaperclipIpc(paperclipWorkspaceRoot);
     } catch (err) {
       logError('[App] Failed to start Paperclip adapter:', err);

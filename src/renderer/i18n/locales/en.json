@@ -72,6 +72,17 @@
     "general": "General",
     "generalDesc": "Appearance, language & preferences"
   },
+  "paperclip": {
+    "backendDefault": "Default backend",
+    "backendOverride": "Advanced: per-agent backend overrides",
+    "backendSdk": "SDK (API key)",
+    "backendCliClaude": "CLI · claude",
+    "backendCliCodex": "CLI · codex",
+    "backendCliPi": "CLI · pi",
+    "useDefault": "Use default",
+    "configureInApi": "Configure in Settings -> API",
+    "willExecuteVia": "Will execute via"
+  },
   "general": {
     "appearance": "Appearance",
     "theme": "Theme",

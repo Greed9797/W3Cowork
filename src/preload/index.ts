@@ -25,6 +25,8 @@ import type {
   MemoryDebugFileInfo,
   MemoryDebugFileContent,
   MemoryInspectSessionResult,
+  BackendAvailabilityMap,
+  PaperclipConfig,
 } from '../renderer/types';
 import type { DiagnosticInput, DiagnosticResult } from '../renderer/types';
 import type {
@@ -452,11 +454,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
       running: boolean;
       port: number | null;
       host: string | null;
-      backend: 'claude' | 'pi';
+      backend: string;
       workspaceRoot: string | null;
+      backends: BackendAvailabilityMap | null;
     }> => ipcRenderer.invoke('paperclip.status'),
     listAgents: (): Promise<Array<{ id: string; name: string; role: string; skill: string }>> =>
       ipcRenderer.invoke('paperclip.listAgents'),
+    getConfig: (): Promise<PaperclipConfig> => ipcRenderer.invoke('paperclip.getConfig'),
+    setConfig: (config: PaperclipConfig): Promise<PaperclipConfig> =>
+      ipcRenderer.invoke('paperclip.setConfig', config),
     getState: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('paperclip.getState'),
     resetState: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('paperclip.resetState'),
     trigger: (payload: {
@@ -726,10 +732,13 @@ declare global {
           running: boolean;
           port: number | null;
           host: string | null;
-          backend: 'claude' | 'pi';
+          backend: string;
           workspaceRoot: string | null;
+          backends: BackendAvailabilityMap | null;
         }>;
         listAgents: () => Promise<Array<{ id: string; name: string; role: string; skill: string }>>;
+        getConfig: () => Promise<PaperclipConfig>;
+        setConfig: (config: PaperclipConfig) => Promise<PaperclipConfig>;
         getState: () => Promise<Record<string, unknown>>;
         resetState: () => Promise<Record<string, unknown>>;
         trigger: (payload: {
