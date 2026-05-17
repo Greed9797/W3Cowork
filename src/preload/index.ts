@@ -445,6 +445,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setEnabled: (enabled: boolean): Promise<{ success: boolean; enabled: boolean }> =>
       ipcRenderer.invoke('memory.setEnabled', enabled),
   },
+
+  // Paperclip HTTP adapter — W3 Sites Agency 7-agent pipeline
+  paperclip: {
+    status: (): Promise<{
+      running: boolean;
+      port: number | null;
+      host: string | null;
+      backend: 'claude' | 'pi';
+      workspaceRoot: string | null;
+    }> => ipcRenderer.invoke('paperclip.status'),
+    listAgents: (): Promise<Array<{ id: string; name: string; role: string; skill: string }>> =>
+      ipcRenderer.invoke('paperclip.listAgents'),
+    getState: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('paperclip.getState'),
+    resetState: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('paperclip.resetState'),
+    trigger: (payload: {
+      agentId: string;
+      task?: { title?: string; description?: string };
+      context?: Record<string, unknown>;
+      budget?: number;
+    }): Promise<{ ok: boolean; status: number; body: unknown }> =>
+      ipcRenderer.invoke('paperclip.trigger', payload),
+    openWorkspace: (): Promise<{ ok: boolean; error: string | null; path: string }> =>
+      ipcRenderer.invoke('paperclip.openWorkspace'),
+    readOutput: (
+      absolutePath: string
+    ): Promise<{
+      exists: boolean;
+      content: string;
+      truncated: boolean;
+      size?: number;
+      mtime?: number;
+    }> => ipcRenderer.invoke('paperclip.readOutput', absolutePath),
+  },
 });
 
 // Type declaration for the renderer process
@@ -687,6 +720,32 @@ declare global {
           workspaceKey?: string
         ) => Promise<MemoryInspectSessionResult | null>;
         setEnabled: (enabled: boolean) => Promise<{ success: boolean; enabled: boolean }>;
+      };
+      paperclip: {
+        status: () => Promise<{
+          running: boolean;
+          port: number | null;
+          host: string | null;
+          backend: 'claude' | 'pi';
+          workspaceRoot: string | null;
+        }>;
+        listAgents: () => Promise<Array<{ id: string; name: string; role: string; skill: string }>>;
+        getState: () => Promise<Record<string, unknown>>;
+        resetState: () => Promise<Record<string, unknown>>;
+        trigger: (payload: {
+          agentId: string;
+          task?: { title?: string; description?: string };
+          context?: Record<string, unknown>;
+          budget?: number;
+        }) => Promise<{ ok: boolean; status: number; body: unknown }>;
+        openWorkspace: () => Promise<{ ok: boolean; error: string | null; path: string }>;
+        readOutput: (absolutePath: string) => Promise<{
+          exists: boolean;
+          content: string;
+          truncated: boolean;
+          size?: number;
+          mtime?: number;
+        }>;
       };
     };
   }

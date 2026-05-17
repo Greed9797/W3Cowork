@@ -62,6 +62,8 @@
     "memoryDesc": "管理长期记忆与工作区经验",
     "schedule": "定时任务",
     "scheduleDesc": "闹钟式自动执行 Prompt",
+    "paperclip": "Paperclip 流水线",
+    "paperclipDesc": "W3 建站代理 7 个智能体流水线状态与手动触发",
     "remote": "远程控制",
     "remoteDesc": "通过飞书等渠道远程使用 Open Cowork",
     "logs": "日志",

@@ -62,6 +62,8 @@
     "memoryDesc": "Manage long-term memory and workspace experience",
     "schedule": "Schedules",
     "scheduleDesc": "Alarm-style prompt automation",
+    "paperclip": "Paperclip Pipeline",
+    "paperclipDesc": "W3 Sites Agency 7-agent pipeline status and manual triggers",
     "remote": "Remote Control",
     "remoteDesc": "Use Open Cowork from Telegram and other channels",
     "logs": "Logs",

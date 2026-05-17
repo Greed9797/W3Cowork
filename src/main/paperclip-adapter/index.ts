@@ -13,6 +13,21 @@ import type { Server } from 'http';
 import { createAdapterServer } from './server';
 
 let activeServer: Server | null = null;
+let activeStatus: AdapterStatus = {
+  running: false,
+  port: null,
+  host: null,
+  backend: 'claude',
+  workspaceRoot: null,
+};
+
+export interface AdapterStatus {
+  running: boolean;
+  port: number | null;
+  host: string | null;
+  backend: 'claude' | 'pi';
+  workspaceRoot: string | null;
+}
 
 export interface StartAdapterOptions {
   workspaceRoot: string;
@@ -52,6 +67,14 @@ export function startPaperclipAdapter(options: StartAdapterOptions): Server | nu
       console.log(`  POST http://${host}:${port}/agent/<id>/heartbeat`);
     });
     activeServer = server;
+    activeStatus = {
+      running: true,
+      port,
+      host,
+      backend:
+        (process.env.PAPERCLIP_AGENT_BINARY || 'claude').toLowerCase() === 'pi' ? 'pi' : 'claude',
+      workspaceRoot: options.workspaceRoot,
+    };
     return server;
   } catch (err) {
     console.error('[PaperclipAdapter] Failed to start:', err);
@@ -64,6 +87,7 @@ export function stopPaperclipAdapter(): Promise<void> {
     if (!activeServer) return resolve();
     const s = activeServer;
     activeServer = null;
+    activeStatus = { ...activeStatus, running: false };
     s.close((err) => {
       if (err) console.error('[PaperclipAdapter] Error during shutdown:', err);
       else console.log('[PaperclipAdapter] Stopped');
@@ -74,4 +98,8 @@ export function stopPaperclipAdapter(): Promise<void> {
 
 export function isPaperclipAdapterRunning(): boolean {
   return activeServer !== null;
+}
+
+export function getAdapterStatus(): AdapterStatus {
+  return { ...activeStatus };
 }

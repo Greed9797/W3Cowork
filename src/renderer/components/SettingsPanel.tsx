@@ -11,6 +11,7 @@ import {
   Globe,
   ChevronRight,
   BrainCircuit,
+  Workflow,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWindowSize } from '../hooks/useWindowSize';
@@ -24,6 +25,7 @@ import { SettingsSchedule } from './settings/SettingsSchedule';
 import { SettingsGeneral } from './settings/SettingsGeneral';
 import { SettingsLogs } from './settings/SettingsLogs';
 import { SettingsMemory } from './settings/SettingsMemory';
+import { SettingsPaperclip } from './settings/SettingsPaperclip';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -34,6 +36,7 @@ interface SettingsPanelProps {
     | 'skills'
     | 'memory'
     | 'schedule'
+    | 'paperclip'
     | 'remote'
     | 'logs'
     | 'general';
@@ -46,6 +49,7 @@ type TabId =
   | 'skills'
   | 'memory'
   | 'schedule'
+  | 'paperclip'
   | 'remote'
   | 'logs'
   | 'general';
@@ -57,6 +61,7 @@ const VALID_TABS = new Set<TabId>([
   'skills',
   'memory',
   'schedule',
+  'paperclip',
   'remote',
   'logs',
   'general',
@@ -138,6 +143,15 @@ export function SettingsPanel({ onClose, initialTab = 'api' }: SettingsPanelProp
       label: t('settings.schedule'),
       icon: Clock3,
       description: t('settings.scheduleDesc'),
+    },
+    {
+      id: 'paperclip' as TabId,
+      label: t('settings.paperclip', 'Paperclip Pipeline'),
+      icon: Workflow,
+      description: t(
+        'settings.paperclipDesc',
+        'W3 Sites Agency 7-agent pipeline status and manual triggers.'
+      ),
     },
     {
       id: 'remote' as TabId,
@@ -270,6 +284,11 @@ export function SettingsPanel({ onClose, initialTab = 'api' }: SettingsPanelProp
               <div className={activeTab === 'schedule' ? '' : 'hidden'}>
                 {viewedTabs.has('schedule') && (
                   <SettingsSchedule isActive={activeTab === 'schedule'} />
+                )}
+              </div>
+              <div className={activeTab === 'paperclip' ? '' : 'hidden'}>
+                {viewedTabs.has('paperclip') && (
+                  <SettingsPaperclip isActive={activeTab === 'paperclip'} />
                 )}
               </div>
               <div className={activeTab === 'remote' ? '' : 'hidden'}>

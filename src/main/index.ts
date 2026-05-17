@@ -86,6 +86,7 @@ import {
 import { listRecentWorkspaceFiles } from './utils/recent-workspace-files';
 import { buildDiagnosticsSummary } from './utils/diagnostics-summary';
 import { startPaperclipAdapter, stopPaperclipAdapter } from './paperclip-adapter';
+import { registerPaperclipIpc } from './paperclip-adapter/ipc';
 
 // Current working directory (persisted between sessions)
 let currentWorkingDir: string | null = null;
@@ -1018,7 +1019,9 @@ app
     // Paperclip HTTP adapter — exposes 7 W3 Sites Agency agents over HTTP for
     // external orchestration. No-op if ENABLE_PAPERCLIP_ADAPTER=false.
     try {
-      startPaperclipAdapter({ workspaceRoot: process.cwd() });
+      const paperclipWorkspaceRoot = process.cwd();
+      startPaperclipAdapter({ workspaceRoot: paperclipWorkspaceRoot });
+      registerPaperclipIpc(paperclipWorkspaceRoot);
     } catch (err) {
       logError('[App] Failed to start Paperclip adapter:', err);
     }

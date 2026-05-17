@@ -60,6 +60,8 @@
     "skillsDesc": "Gerenciar skills personalizadas",
     "schedule": "Agendamentos",
     "scheduleDesc": "Automação de prompts agendados",
+    "paperclip": "Pipeline Paperclip",
+    "paperclipDesc": "Status e disparo manual dos 7 agentes da W3 Sites Agency",
     "remote": "Controle Remoto",
     "remoteDesc": "Use o Open Cowork pelo Telegram e outros canais",
     "logs": "Logs",
