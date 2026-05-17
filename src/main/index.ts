@@ -85,6 +85,7 @@ import {
 } from './utils/logger';
 import { listRecentWorkspaceFiles } from './utils/recent-workspace-files';
 import { buildDiagnosticsSummary } from './utils/diagnostics-summary';
+import { startPaperclipAdapter, stopPaperclipAdapter } from './paperclip-adapter';
 
 // Current working directory (persisted between sessions)
 let currentWorkingDir: string | null = null;
@@ -1013,6 +1014,14 @@ app
         createWindow();
       }
     });
+
+    // Paperclip HTTP adapter — exposes 7 W3 Sites Agency agents over HTTP for
+    // external orchestration. No-op if ENABLE_PAPERCLIP_ADAPTER=false.
+    try {
+      startPaperclipAdapter({ workspaceRoot: process.cwd() });
+    } catch (err) {
+      logError('[App] Failed to start Paperclip adapter:', err);
+    }
   })
   .catch((error) => {
     logError('[App] Startup failed:', error);
@@ -1132,6 +1141,13 @@ for (const sig of ['SIGTERM', 'SIGINT'] as const) {
 
 // Handle app quit - before-quit (for macOS Cmd+Q and other quit methods)
 app.on('before-quit', async (event) => {
+  // Stop Paperclip HTTP adapter first (cheap, no awaits beyond socket close).
+  try {
+    await stopPaperclipAdapter();
+  } catch (err) {
+    logError('[App] Failed to stop Paperclip adapter:', err);
+  }
+
   if (!isCleaningUp) {
     // In dev mode, exit quickly — no need for async sandbox cleanup
     if (process.env.VITE_DEV_SERVER_URL) {

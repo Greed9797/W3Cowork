@@ -1,0 +1,48 @@
+# Paperclip orchestrator for the W3 Sites Agency pipeline.
+#
+# Paperclip runs in a container on the same host as the W3Cowork Electron app.
+# It calls back into the adapter at host.docker.internal:3200 (macOS/Windows)
+# or 172.17.0.1:3200 (Linux, via extra_hosts below).
+#
+# Bring up:
+#   cp ../.env.example .env   # then fill ANTHROPIC_API_KEY + PAPERCLIP_SECRET
+#   docker compose up -d
+#
+# Dashboard: http://localhost:3100
+#
+# Tear down:
+#   docker compose down            # keep data volume
+#   docker compose down -v         # wipe everything
+
+services:
+  paperclip:
+    image: node:20-alpine
+    container_name: w3sites-paperclip
+    working_dir: /app
+    # Onboard once, then keep running. The CLI persists state under .paperclip/.
+    command: sh -c "npx -y paperclipai@latest onboard --yes --bind lan && tail -f /dev/null"
+    ports:
+      - '127.0.0.1:3100:3100'
+    environment:
+      NODE_ENV: production
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PAPERCLIP_SECRET: ${PAPERCLIP_SECRET:-}
+      # The adapter URL Paperclip should call. Override for Linux hosts.
+      W3COWORK_ADAPTER_URL: ${W3COWORK_ADAPTER_URL:-http://host.docker.internal:3200}
+    volumes:
+      - paperclip-data:/app/.paperclip
+    extra_hosts:
+      # Linux: makes host.docker.internal resolve to the Docker bridge gateway.
+      # macOS / Docker Desktop already provides this; the line is a no-op there.
+      - 'host.docker.internal:host-gateway'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O- http://localhost:3100/health || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  paperclip-data:
+    name: w3sites-paperclip-data

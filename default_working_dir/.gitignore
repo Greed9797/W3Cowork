@@ -1,0 +1,13 @@
+# Ignore agent-generated outputs; keep dir structure via .gitkeep.
+leads/*
+diagnostics/*
+sites/*
+outreach/*
+
+!leads/.gitkeep
+!diagnostics/.gitkeep
+!sites/.gitkeep
+!outreach/.gitkeep
+
+# Keep the shared pipeline state template tracked.
+!pipeline-state.json
