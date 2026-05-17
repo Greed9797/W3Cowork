@@ -81,7 +81,10 @@
     "backendCliPi": "CLI · pi",
     "useDefault": "Use default",
     "configureInApi": "Configure in Settings -> API",
-    "willExecuteVia": "Will execute via"
+    "willExecuteVia": "Will execute via",
+    "sending": "Running...",
+    "triggerRunning": "Running heartbeat... elapsed {{seconds}}s. If the backend does not return, the request will time out with a visible error.",
+    "agent1BackendWarning": "Agent-1 normally needs CLI Claude for native web_search. Switch its override to CLI claude before prospecting."
   },
   "general": {
     "appearance": "Appearance",

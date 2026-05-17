@@ -57,6 +57,7 @@ const PIPELINE_STATE_TEMPLATE = {
 const MAX_OUTPUT_BYTES = 256 * 1024; // 256 KB read cap
 const DEFAULT_TASK_TIMEOUT_MS = 10 * 60 * 1000;
 const IPC_TRIGGER_TIMEOUT_BUFFER_MS = 30 * 1000;
+const DEFAULT_TRIGGER_RESPONSE_TIMEOUT_MS = 3 * 60 * 1000;
 
 function statePath(workspaceRoot: string): string {
   return path.join(workspaceRoot, WORKSPACE_DIR, 'pipeline-state.json');
@@ -85,11 +86,16 @@ function isPathInsideWorkspace(workspaceRoot: string, target: string): boolean {
 }
 
 function resolveTriggerTimeoutMs(): number {
+  const explicitTimeoutMs = parseInt(process.env.PAPERCLIP_TRIGGER_TIMEOUT_MS || '', 10);
+  if (Number.isFinite(explicitTimeoutMs) && explicitTimeoutMs > 0) {
+    return explicitTimeoutMs;
+  }
   const taskTimeoutMs = parseInt(
     process.env.PAPERCLIP_TASK_TIMEOUT_MS || `${DEFAULT_TASK_TIMEOUT_MS}`,
     10
   );
-  return taskTimeoutMs + IPC_TRIGGER_TIMEOUT_BUFFER_MS;
+  const backendTimeoutMs = taskTimeoutMs + IPC_TRIGGER_TIMEOUT_BUFFER_MS;
+  return Math.min(backendTimeoutMs, DEFAULT_TRIGGER_RESPONSE_TIMEOUT_MS);
 }
 
 function postLocalJson(
@@ -123,7 +129,11 @@ function postLocalJson(
     );
 
     req.setTimeout(timeoutMs, () => {
-      req.destroy(new Error(`Paperclip heartbeat timed out after ${timeoutMs}ms`));
+      req.destroy(
+        new Error(
+          `Paperclip heartbeat did not return within ${timeoutMs}ms. The adapter task was cancelled; increase PAPERCLIP_TRIGGER_TIMEOUT_MS for longer manual runs.`
+        )
+      );
     });
     req.on('error', reject);
     req.write(body);

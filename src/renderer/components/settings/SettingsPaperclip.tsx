@@ -137,6 +137,9 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
     '{\n  "nicho": "padaria",\n  "cidade": "Curitiba, PR",\n  "quantidade": 10\n}'
   );
   const [triggerBudget, setTriggerBudget] = useState('0.5');
+  const [triggerError, setTriggerError] = useState<string | null>(null);
+  const [triggerStartedAt, setTriggerStartedAt] = useState<number | null>(null);
+  const [triggerNow, setTriggerNow] = useState(() => Date.now());
 
   const api = (typeof window !== 'undefined' && window.electronAPI?.paperclip) || null;
 
@@ -172,6 +175,12 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
     }, POLL_INTERVAL_MS);
     return () => window.clearInterval(id);
   }, [isActive, refresh]);
+
+  useEffect(() => {
+    if (!triggerStartedAt) return;
+    const id = window.setInterval(() => setTriggerNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [triggerStartedAt]);
 
   const sortedAgents = useMemo(() => {
     const map = new Map(agents.map((a) => [a.id, a]));
@@ -265,37 +274,51 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
     setTriggerModalFor(agentId);
     setTriggerTitle(`Trigger ${agentId} manually`);
     setLastTrigger(null);
+    setTriggerError(null);
+    setTriggerStartedAt(null);
   };
 
   const runTrigger = async () => {
     if (!api || !triggerModalFor) return;
+    const agentId = triggerModalFor;
     setBusyAgentId(triggerModalFor);
     setError(null);
+    setTriggerError(null);
+    setTriggerStartedAt(Date.now());
+    setTriggerNow(Date.now());
     let context: Record<string, unknown> = {};
     if (triggerContext.trim().length > 0) {
       try {
         context = JSON.parse(triggerContext);
       } catch (err) {
-        setError(`Invalid JSON context: ${(err as Error).message}`);
+        const message = `Invalid JSON context: ${(err as Error).message}`;
+        setError(message);
+        setTriggerError(message);
         setBusyAgentId(null);
+        setTriggerStartedAt(null);
         return;
       }
     }
     const budget = Number.parseFloat(triggerBudget);
+    let closeModal = false;
     try {
       const result = await api.trigger({
-        agentId: triggerModalFor,
+        agentId,
         task: { title: triggerTitle, description: triggerTitle },
         context,
         budget: Number.isFinite(budget) ? budget : 0.5,
       });
-      setLastTrigger({ agentId: triggerModalFor, result });
+      setLastTrigger({ agentId, result });
       await refresh();
+      closeModal = true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+      setTriggerError(message);
     } finally {
       setBusyAgentId(null);
-      setTriggerModalFor(null);
+      setTriggerStartedAt(null);
+      if (closeModal) setTriggerModalFor(null);
     }
   };
 
@@ -320,6 +343,12 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
       setError(err instanceof Error ? err.message : String(err));
     }
   };
+
+  const activeTriggerBackend = triggerModalFor ? resolveAgentBackend(triggerModalFor) : null;
+  const isAgent1WithoutClaude =
+    triggerModalFor === 'agent-1' && activeTriggerBackend?.type !== 'cli-claude';
+  const triggerElapsedSeconds =
+    triggerStartedAt !== null ? Math.max(0, Math.floor((triggerNow - triggerStartedAt) / 1000)) : 0;
 
   if (!api) {
     return (
@@ -607,15 +636,38 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
             <p className="mt-2 rounded-md border border-border-muted bg-surface-secondary px-3 py-2 text-xs text-text-secondary">
               {t('paperclip.willExecuteVia', 'Will execute via')}:&nbsp;
               <span className="font-mono text-text-primary">
-                {describeBackend(resolveAgentBackend(triggerModalFor))}
+                {activeTriggerBackend ? describeBackend(activeTriggerBackend) : '—'}
               </span>
             </p>
+            {isAgent1WithoutClaude && (
+              <p className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                {t(
+                  'paperclip.agent1BackendWarning',
+                  'Agent-1 normally needs CLI Claude for native web_search. Switch its override to CLI claude before prospecting.'
+                )}
+              </p>
+            )}
+            {triggerStartedAt && (
+              <p className="mt-2 rounded-md border border-border-muted bg-surface-secondary px-3 py-2 text-xs text-text-secondary">
+                {t(
+                  'paperclip.triggerRunning',
+                  'Running heartbeat... elapsed {{seconds}}s. If the backend does not return, the request will time out with a visible error.',
+                  { seconds: triggerElapsedSeconds }
+                )}
+              </p>
+            )}
+            {triggerError && (
+              <p className="mt-2 rounded-md border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-500">
+                {triggerError}
+              </p>
+            )}
 
             <label className="mt-4 block text-xs font-medium text-text-secondary">Task title</label>
             <input
               type="text"
               value={triggerTitle}
               onChange={(e) => setTriggerTitle(e.target.value)}
+              disabled={busyAgentId !== null}
               className="mt-1 w-full rounded-md border border-border-muted bg-surface-secondary px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
             />
 
@@ -627,6 +679,7 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
               onChange={(e) => setTriggerContext(e.target.value)}
               rows={6}
               spellCheck={false}
+              disabled={busyAgentId !== null}
               className="mt-1 w-full rounded-md border border-border-muted bg-surface-secondary px-3 py-2 font-mono text-xs text-text-primary focus:border-accent focus:outline-none"
             />
 
@@ -639,12 +692,14 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
               min="0.1"
               value={triggerBudget}
               onChange={(e) => setTriggerBudget(e.target.value)}
+              disabled={busyAgentId !== null}
               className="mt-1 w-32 rounded-md border border-border-muted bg-surface-secondary px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
             />
 
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setTriggerModalFor(null)}
+                disabled={busyAgentId !== null}
                 className="rounded-md border border-border-muted px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover"
               >
                 {t('common.cancel', 'Cancel')}
@@ -655,7 +710,9 @@ export function SettingsPaperclip({ isActive }: { isActive: boolean }) {
                 className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
               >
                 {busyAgentId !== null && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                {t('paperclip.send', 'Send heartbeat')}
+                {busyAgentId !== null
+                  ? t('paperclip.sending', 'Running...')
+                  : t('paperclip.send', 'Send heartbeat')}
               </button>
             </div>
           </div>

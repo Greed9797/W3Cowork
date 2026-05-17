@@ -8,6 +8,7 @@ export interface BackendExecuteParams {
   outputDirAbs: string;
   timeoutMs: number;
   budgetUsd: number;
+  signal?: AbortSignal;
 }
 export interface BackendExecuteResult {
   summary: string;

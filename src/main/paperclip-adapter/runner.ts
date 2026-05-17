@@ -24,6 +24,7 @@ export interface RunTaskParams {
   budgetUsd: number;
   workspaceRoot: string; // absolute path to project root (where default_working_dir lives)
   mcpManager?: MCPManager | null;
+  signal?: AbortSignal;
 }
 
 export type RunTaskResult = BackendExecuteResult;
@@ -92,6 +93,9 @@ export async function runAgentTask(params: RunTaskParams): Promise<RunTaskResult
   if (!isAgentId(params.agent.id)) {
     throw new Error(`Invalid Paperclip agent id: ${params.agent.id}`);
   }
+  if (params.signal?.aborted) {
+    throw new Error(`Agent ${params.agent.id} was cancelled before execution started`);
+  }
 
   const skillContent = loadSkillContent(params.workspaceRoot, params.agent.skill);
   const pipelineState = readPipelineState(params.workspaceRoot);
@@ -110,5 +114,6 @@ export async function runAgentTask(params: RunTaskParams): Promise<RunTaskResult
     outputDirAbs,
     timeoutMs,
     budgetUsd: params.budgetUsd,
+    signal: params.signal,
   });
 }

@@ -118,6 +118,9 @@ abstract class CliBackend implements BackendStrategy {
   abstract buildArgs(params: BackendExecuteParams): string[];
 
   async execute(params: BackendExecuteParams): Promise<BackendExecuteResult> {
+    if (params.signal?.aborted) {
+      throw new Error(`Agent ${params.agent.id} was cancelled before execution started`);
+    }
     const binary = this.resolveBinary(params.workspaceRoot);
     const args = this.buildArgs(params);
     fs.mkdirSync(params.outputDirAbs, { recursive: true });
@@ -137,7 +140,13 @@ abstract class CliBackend implements BackendStrategy {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        if (params.signal) params.signal.removeEventListener('abort', onAbort);
         fn();
+      };
+
+      const onAbort = () => {
+        child.kill('SIGTERM');
+        settle(() => reject(new Error(`Agent ${params.agent.id} was cancelled`)));
       };
 
       const timer = setTimeout(() => {
@@ -146,6 +155,8 @@ abstract class CliBackend implements BackendStrategy {
           reject(new Error(`Agent ${params.agent.id} timed out after ${params.timeoutMs}ms`))
         );
       }, params.timeoutMs);
+
+      if (params.signal) params.signal.addEventListener('abort', onAbort, { once: true });
 
       child.stdout.on('data', (chunk: Buffer) => {
         stdout += chunk.toString('utf-8');

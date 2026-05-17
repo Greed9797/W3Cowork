@@ -81,7 +81,10 @@
     "backendCliPi": "CLI · pi",
     "useDefault": "使用默认",
     "configureInApi": "前往 设置 -> API",
-    "willExecuteVia": "将通过以下后端执行"
+    "willExecuteVia": "将通过以下后端执行",
+    "sending": "执行中...",
+    "triggerRunning": "Heartbeat 执行中... 已用 {{seconds}} 秒。如果后端没有返回，请求会超时并显示错误。",
+    "agent1BackendWarning": "agent-1 通常需要 CLI Claude 的原生 web_search。开始找线索前请将覆盖项切换为 CLI claude。"
   },
   "general": {
     "appearance": "外观",

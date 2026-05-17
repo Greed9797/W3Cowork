@@ -121,6 +121,11 @@ async function handleRequest(
       const taskText = task?.description || task?.title || 'Execute your role';
       const context = (body.context as Record<string, unknown>) ?? {};
       const budget = typeof body.budget === 'number' ? (body.budget as number) : 1.0;
+      const abortController = new AbortController();
+      const abortOnDisconnect = () => {
+        if (!res.writableEnded) abortController.abort();
+      };
+      res.once('close', abortOnDisconnect);
 
       try {
         const { runAgentTask } = await import('./runner');
@@ -131,7 +136,9 @@ async function handleRequest(
           budgetUsd: budget,
           workspaceRoot,
           mcpManager,
+          signal: abortController.signal,
         });
+        res.off('close', abortOnDisconnect);
         return sendJson(res, 200, {
           status: 'completed',
           agentId: agent.id,
@@ -142,6 +149,15 @@ async function handleRequest(
           exitCode: result.exitCode,
         });
       } catch (err) {
+        res.off('close', abortOnDisconnect);
+        if (abortController.signal.aborted) {
+          if (res.destroyed || res.writableEnded) return;
+          return sendJson(res, 499, {
+            status: 'failed',
+            agentId: agent.id,
+            error: `Agent ${agent.id} was cancelled because the client disconnected`,
+          });
+        }
         const message = err instanceof Error ? err.message : String(err);
         return sendJson(res, 500, { status: 'failed', agentId: agent.id, error: message });
       }

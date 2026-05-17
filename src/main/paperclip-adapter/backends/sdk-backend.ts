@@ -125,6 +125,9 @@ export class SdkBackend implements BackendStrategy {
   ) {}
 
   async execute(params: BackendExecuteParams): Promise<BackendExecuteResult> {
+    if (params.signal?.aborted) {
+      throw new Error(`Agent ${params.agent.id} was cancelled before execution started`);
+    }
     const startTime = Date.now();
     const config = resolveEffectiveConfig(this.configSetId);
     const piModel = resolveModel(config);
@@ -165,6 +168,7 @@ export class SdkBackend implements BackendStrategy {
     });
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let abortListener: (() => void) | undefined;
     try {
       await Promise.race([
         session.prompt(params.prompt, { expandPromptTemplates: false }),
@@ -173,6 +177,14 @@ export class SdkBackend implements BackendStrategy {
             void session.abort().catch(() => undefined);
             reject(new Error(`SDK backend timed out after ${params.timeoutMs}ms`));
           }, params.timeoutMs);
+        }),
+        new Promise<never>((_, reject) => {
+          if (!params.signal) return;
+          abortListener = () => {
+            void session.abort().catch(() => undefined);
+            reject(new Error(`Agent ${params.agent.id} was cancelled`));
+          };
+          params.signal.addEventListener('abort', abortListener, { once: true });
         }),
       ]);
 
@@ -185,6 +197,9 @@ export class SdkBackend implements BackendStrategy {
       };
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
+      if (params.signal && abortListener) {
+        params.signal.removeEventListener('abort', abortListener);
+      }
       try {
         unsubscribe();
       } catch {
