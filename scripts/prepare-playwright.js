@@ -19,7 +19,9 @@ const { execSync } = require('child_process');
 const os = require('os');
 
 const PROJECT_ROOT = path.join(__dirname, '..');
-const PLAYWRIGHT_MCP_VERSION = require(path.join(PROJECT_ROOT, 'package.json')).dependencies['@playwright/mcp'];
+const PLAYWRIGHT_MCP_VERSION = require(path.join(PROJECT_ROOT, 'package.json')).dependencies[
+  '@playwright/mcp'
+];
 
 function detectTargets() {
   const arg = process.argv.includes('--all');
@@ -115,7 +117,10 @@ function installChromium(target) {
   const tag = `${target.platform}-${target.arch}`;
   const browsersDir = path.join(PROJECT_ROOT, 'resources', 'playwright-browsers', tag);
 
-  if (fs.existsSync(browsersDir) && fs.readdirSync(browsersDir).some((f) => f.startsWith('chromium'))) {
+  if (
+    fs.existsSync(browsersDir) &&
+    fs.readdirSync(browsersDir).some((f) => f.startsWith('chromium'))
+  ) {
     console.log(`[playwright-browsers] already present for ${tag}, skip download`);
     return;
   }
@@ -133,7 +138,9 @@ function installChromium(target) {
   // For now: just download for the current platform. Cross-platform CI builds
   // will run this script on their respective runners.
   if (target.platform !== process.platform || target.arch !== process.arch) {
-    console.log(`[playwright-browsers] Skipping ${tag} (not host); CI runner downloads in its own job`);
+    console.log(
+      `[playwright-browsers] Skipping ${tag} (not host); CI runner downloads in its own job`
+    );
     return;
   }
 
