@@ -1730,12 +1730,19 @@ ${hints.join('\n')}
                     ...resolvedArgs.filter((arg) => !arg.includes('@playwright/mcp')),
                   ];
                   serverEnv.PLAYWRIGHT_BROWSERS_PATH = bundledPlaywrightMcp.browsersDir;
+                  // vendor/ holds bundled deps (named non-`node_modules` so
+                  // electron-builder doesn't strip it from extraResources).
+                  const vendorDir = path.join(path.dirname(bundledPlaywrightMcp.entry), 'vendor');
+                  serverEnv.NODE_PATH = serverEnv.NODE_PATH
+                    ? `${vendorDir}${path.delimiter}${serverEnv.NODE_PATH}`
+                    : vendorDir;
                   log(
                     `[ClaudeAgentRunner]   Playwright MCP redirected to bundled entry: ${bundledPlaywrightMcp.entry}`
                   );
                   log(
                     `[ClaudeAgentRunner]   PLAYWRIGHT_BROWSERS_PATH=${bundledPlaywrightMcp.browsersDir}`
                   );
+                  log(`[ClaudeAgentRunner]   NODE_PATH=${serverEnv.NODE_PATH}`);
                 }
 
                 // Ensure Playwright MCP always runs headless (no screen takeover)

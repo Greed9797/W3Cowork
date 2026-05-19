@@ -47,9 +47,13 @@ function copyNodeModule(srcModule, destNodeModules) {
 function bundleMcp(target) {
   const tag = `${target.platform}-${target.arch}`;
   const outDir = path.join(PROJECT_ROOT, 'resources', 'playwright-mcp', tag);
-  const nodeModulesDir = path.join(outDir, 'node_modules');
+  // NOTE: dir is named `vendor` (not `node_modules`) because electron-builder
+  // filters out `node_modules/` inside extraResources. Resolution at runtime
+  // is handled via NODE_PATH set when spawning the MCP server.
+  const nodeModulesDir = path.join(outDir, 'vendor');
 
   console.log(`[playwright-mcp] Bundling for ${tag}`);
+  fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(nodeModulesDir, { recursive: true });
 
   const rootNm = path.join(PROJECT_ROOT, 'node_modules');
@@ -102,13 +106,18 @@ function bundleMcp(target) {
     copyNodeModule(mod, nodeModulesDir);
   }
 
-  // Entry wrapper
+  // Entry wrapper — resolves modules from sibling `vendor/` via NODE_PATH
+  // (set externally by agent-runner when spawning this entry).
   const entryPath = path.join(outDir, 'entry.js');
   fs.writeFileSync(
     entryPath,
     `#!/usr/bin/env node\n` +
       `// Bundled Playwright MCP entry — invokes the CLI directly without npx.\n` +
-      `require('@playwright/mcp/cli.js');\n`
+      `const path = require('path');\n` +
+      `const Module = require('module');\n` +
+      `process.env.NODE_PATH = path.join(__dirname, 'vendor');\n` +
+      `Module._initPaths();\n` +
+      `require(path.join(__dirname, 'vendor', '@playwright', 'mcp', 'cli.js'));\n`
   );
   console.log(`[playwright-mcp] entry: ${entryPath}`);
 }
