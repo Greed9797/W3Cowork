@@ -71,7 +71,7 @@
     "@mariozechner/pi-coding-agent": "^0.60.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@playwright/mcp": "0.0.75",
-    "@slack/bolt": "4.7.0",
+    "@slack/bolt": "4.7.2",
     "@slack/web-api": "7.15.1",
     "@types/adm-zip": "0.5.8",
     "adm-zip": "0.5.17",
@@ -101,7 +101,7 @@
     "remark-math": "^6.0.0",
     "uuid": "^13.0.0",
     "ws": "^8.19.0",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.2",
